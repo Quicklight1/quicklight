@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1013">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>RGB Light Control</title>
+<style>
+  :root {
+    --bg: #0e1013;
+    --panel: #171a1f;
+    --panel-2: #1f232a;
+    --line: #2a2f37;
+    --text: #eef1f5;
+    --muted: #8b939f;
+    --accent: #ff3b3b;
+    --ok: #32d27a;
+    --warn: #ffb020;
+    --amber: #ffae00;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { padding: max(14px, env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #555; margin-right: 6px; vertical-align: 1px; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.busy { background: var(--warn); }
+  button { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer; touch-action: manipulation; }
+  button:active { transform: scale(.98); }
+  button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  button[disabled], .disabled button { opacity: .45; pointer-events: none; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .note { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .banner { background: #2a1d0a; border: 1px solid #5a3d10; color: #ffd9a0; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; font-size: 14px; }
+  .banner b { color: #fff; }
+  .hidden { display: none !important; }
+
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+  .seg button { border: 0; background: transparent; padding: 12px 6px; border-radius: 9px; font-weight: 600; }
+  .seg button.sel { background: var(--text); color: #111; }
+  .seg.big button { padding: 16px 6px; font-size: 17px; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--panel-2); border-radius: 10px; padding: 10px; text-align: center; }
+  .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 12px; color: var(--muted); }
+  .stat.warn .v { color: var(--warn); }
+  .chips { display: flex; gap: 8px; margin-top: 10px; }
+  .chip { flex: 1; text-align: center; font-size: 13px; padding: 7px 0; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+  .chip.brake.on { background: #4a0f12; color: #ff8a8a; border-color: #8a1c22; }
+  .chip.turn.on { background: #4a3300; color: #ffd27a; border-color: #8a6200; }
+
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .sw { aspect-ratio: 1.25; border-radius: 12px; border: 2px solid transparent; position: relative; padding: 0;
+    display: flex; align-items: flex-end; justify-content: center; }
+  .sw span { font-size: 11px; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); padding-bottom: 5px; }
+  .sw.sel { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg) inset; }
+  .offrow { margin-top: 10px; }
+  .offrow button { width: 100%; }
+  .offrow button.sel { border-color: var(--text); background: #2b3038; }
+
+  .slider { display: grid; grid-template-columns: 88px 1fr 46px; align-items: center; gap: 10px; margin-top: 12px; }
+  .slider label { color: var(--muted); font-size: 14px; }
+  .slider output { text-align: right; font-variant-numeric: tabular-nums; font-size: 14px; }
+  input[type=range] { width: 100%; height: 34px; accent-color: var(--accent); }
+
+  .patterns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .patterns button { text-align: left; padding: 11px 12px; font-size: 14px; line-height: 1.2; }
+  .patterns button.sel { background: var(--text); color: #111; border-color: var(--text); }
+  .patterns small { color: var(--warn); }
+  .patterns button.sel small { color: #8a5a00; }
+
+  .test { width: 100%; margin-top: 10px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 16px; }
+  .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: #2b3038; color: var(--text); border: 1px solid var(--line); padding: 10px 14px; border-radius: 12px;
+    font-size: 14px; max-width: 90vw; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>RGB Light Control</h1>
+      <div class="sub"><span id="dot" class="dot"></span><span id="connText">Not connected</span></div>
+    </div>
+    <button id="connectBtn" class="primary">Connect</button>
+  </header>
+
+  <div id="noBle" class="banner hidden">
+    This browser can't use Bluetooth.<br>
+    <b>iPhone:</b> install the free <b>Bluefy – Web BLE Browser</b> app from the App Store and open this page in it.<br>
+    <b>Android:</b> open this page in <b>Chrome</b>.
+  </div>
+
+  <div id="pinHelp" class="banner hidden">
+    First time connecting? Your phone will ask for a <b>6-digit PIN</b>. Enter the PIN that came with your light.
+  </div>
+
+  <div id="controls" class="disabled">
+    <section class="card">
+      <h2>Light source</h2>
+      <div class="seg big" id="sourceSeg">
+        <button data-v="0">Controller</button>
+        <button data-v="1">Phone</button>
+      </div>
+      <p class="note">Brake and turn signals always take over. After power-up the light starts on Controller.</p>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <div class="stats">
+        <div class="stat" id="tempStat"><div class="v" id="tempV">--</div><div class="l">Heat sink</div></div>
+        <div class="stat"><div class="v" id="voltV">--</div><div class="l">Vehicle</div></div>
+        <div class="stat" id="powerStat"><div class="v" id="powerV">--</div><div class="l">Heat limit</div></div>
+      </div>
+      <div class="chips">
+        <div class="chip turn" id="chipL">◀ Left</div>
+        <div class="chip brake" id="chipB">Brake</div>
+        <div class="chip turn" id="chipR">Right ▶</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Colors</h2>
+      <div class="swatches" id="swatches"></div>
+      <div class="offrow"><button id="offBtn">Lights off</button></div>
+      <div class="slider">
+        <label for="bright">Brightness</label>
+        <input id="bright" type="range" min="5" max="100" value="100">
+        <output id="brightOut">100%</output>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Flash &amp; fade</h2>
+      <div class="patterns" id="patterns"></div>
+      <p class="note"><small style="color:var(--warn)">●</small> uses the selected color</p>
+      <div class="slider">
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="1" max="100" value="50">
+        <output id="speedOut">50</output>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Brake strobe</h2>
+      <div class="seg" id="brakeSeg">
+        <button data-v="0">Steady</button>
+        <button data-v="1">Short</button>
+        <button data-v="2">Standard</button>
+        <button data-v="3">Fast</button>
+      </div>
+      <button class="test" id="testBtn">Test brake strobe</button>
+    </section>
+  </div>
+
+  <footer id="footer">RGB Light Control</footer>
+</div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+(() => {
+  // Must match the ESP32 program
+  const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
+  const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
+  const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9 };
+
+  const COLORS = [
+    ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
+    ['Lime', '#9dff00'], ['Green', '#00e04a'], ['Cyan', '#00e5e5'], ['Sky Blue', '#2ea8ff'],
+    ['Blue', '#2b4bff'], ['Purple', '#8a2be2'], ['Magenta', '#ff2bd6'], ['Pink', '#ff4f8b'],
+  ];
+  // [name, uses selected color]
+  const PATTERNS = [
+    ['Rainbow Fade', 0], ['Rainbow Jump', 0], ['Rainbow Strobe', 0], ['Breathe', 1],
+    ['Strobe', 1], ['Double Flash', 1], ['Heartbeat', 1], ['Left/Right Flash', 1],
+    ['Left/Right Fade', 1], ['Purple/Cyan Wig-Wag', 0], ['Pink/Blue Fade', 0], ['Fire Flicker', 0],
+    ['Ocean Fade', 0], ['Sunset Fade', 0], ['Forest Fade', 0], ['3-Color Jump', 0],
+    ['7-Color Jump', 0], ['3-Color Fade', 0], ['Random Flash', 0], ['Rainbow Pulse', 0],
+  ];
+
+  const $ = id => document.getElementById(id);
+  const state = { source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2 };
+  let device = null, cmdChar = null, statusChar = null, connected = false, userDisconnect = false;
+
+  // ---------- UI build ----------
+  COLORS.forEach(([name, css], i) => {
+    const b = document.createElement('button');
+    b.className = 'sw'; b.style.background = css; b.dataset.v = i;
+    b.innerHTML = '<span>' + name + '</span>';
+    b.onclick = () => { state.color = i; state.type = 0; state.source = 1; render(); send(OP.COLOR, i); };
+    $('swatches').appendChild(b);
+  });
+  PATTERNS.forEach(([name, usesColor], i) => {
+    const b = document.createElement('button');
+    b.dataset.v = i;
+    b.innerHTML = name + (usesColor ? ' <small>●</small>' : '');
+    b.onclick = () => { state.pattern = i; state.type = 1; state.source = 1; render(); send(OP.PATTERN, i); };
+    $('patterns').appendChild(b);
+  });
+  $('offBtn').onclick = () => { state.type = 2; state.source = 1; render(); send(OP.OFF, 0); };
+  $('sourceSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+    state.source = +b.dataset.v; render(); send(OP.SOURCE, state.source);
+  });
+  $('brakeSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+    state.brake = +b.dataset.v; render(); send(OP.BRAKEMODE, state.brake);
+  });
+  $('testBtn').onclick = () => send(OP.TEST, 0);
+
+  function slider(id, outId, op, key, fmt) {
+    const el = $(id); let timer = null, lastSent = 0;
+    const push = () => { lastSent = Date.now(); send(op, state[key]); };
+    el.addEventListener('input', () => {
+      state[key] = +el.value; $(outId).textContent = fmt(state[key]);
+      clearTimeout(timer);
+      if (Date.now() - lastSent > 150) push(); else timer = setTimeout(push, 150);
+    });
+    el.addEventListener('change', () => { clearTimeout(timer); push(); });
+  }
+  slider('bright', 'brightOut', OP.BRIGHT, 'bright', v => v + '%');
+  slider('speed', 'speedOut', OP.SPEED, 'speed', v => String(v));
+
+  function render() {
+    $('sourceSeg').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.v === state.source));
+    $('brakeSeg').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.v === state.brake));
+    $('swatches').querySelectorAll('.sw').forEach(b =>
+      b.classList.toggle('sel', state.source === 1 && state.type === 0 && +b.dataset.v === state.color));
+    $('patterns').querySelectorAll('button').forEach(b =>
+      b.classList.toggle('sel', state.source === 1 && state.type === 1 && +b.dataset.v === state.pattern));
+    $('offBtn').classList.toggle('sel', state.source === 1 && state.type === 2);
+    if (document.activeElement !== $('bright')) { $('bright').value = state.bright; $('brightOut').textContent = state.bright + '%'; }
+    if (document.activeElement !== $('speed'))  { $('speed').value = state.speed;  $('speedOut').textContent = state.speed; }
+  }
+
+  function setConn(mode, text) {
+    $('dot').className = 'dot' + (mode === 'on' ? ' on' : mode === 'busy' ? ' busy' : '');
+    $('connText').textContent = text;
+    connected = mode === 'on';
+    $('controls').classList.toggle('disabled', !connected);
+    $('connectBtn').textContent = connected ? 'Disconnect' : 'Connect';
+    $('connectBtn').classList.toggle('primary', !connected);
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
+  }
+
+  // ---------- Bluetooth ----------
+  let chain = Promise.resolve();
+  function send(op, val) {
+    if (!cmdChar) return;
+    const data = new Uint8Array([op, val & 0xff]);
+    chain = chain.then(() => {
+      const w = cmdChar.writeValueWithResponse ? cmdChar.writeValueWithResponse(data) : cmdChar.writeValue(data);
+      return w;
+    }).catch(e => { console.warn('write failed', e); });
+  }
+
+  function onStatus(ev) {
+    const d = ev.target.value;
+    if (!d || d.byteLength < 15) return;
+    state.source  = d.getUint8(0);
+    state.type    = d.getUint8(1);
+    state.color   = d.getUint8(2);
+    state.pattern = d.getUint8(3);
+    state.speed   = d.getUint8(4);
+    state.bright  = d.getUint8(5);
+    state.brake   = d.getUint8(6);
+    const flags = d.getUint8(7);
+    const tF = d.getInt16(8, true) / 10;
+    const volts = d.getUint16(10, true) / 100;
+    const power = d.getUint8(12);
+    const fw = d.getUint8(14);
+    const fault = !!(flags & 0x08);
+    $('tempV').textContent = fault ? 'Fault' : Math.round(tF) + '°F';
+    $('tempStat').classList.toggle('warn', fault || tF > 120);
+    $('voltV').textContent = volts.toFixed(1) + 'V';
+    $('powerV').textContent = power + '%';
+    $('powerStat').classList.toggle('warn', power < 100);
+    $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
+    $('chipL').classList.toggle('on', !!(flags & 0x02));
+    $('chipR').classList.toggle('on', !!(flags & 0x04));
+    $('footer').textContent = (device && device.name ? device.name + ' · ' : '') + 'firmware v' + fw;
+    render();
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  async function setupGatt() {
+    setConn('busy', 'Connecting…');
+    const server = await device.gatt.connect();
+    let lastErr = null;
+    // The first time, the phone asks for the PIN here; retry while that happens
+    for (let i = 0; i < 6; i++) {
+      try {
+        const svc = await server.getPrimaryService(SVC);
+        cmdChar = await svc.getCharacteristic(CMD);
+        statusChar = await svc.getCharacteristic(STATUS);
+        statusChar.addEventListener('characteristicvaluechanged', onStatus);
+        await statusChar.startNotifications();
+        const v = await statusChar.readValue();
+        onStatus({ target: { value: v } });
+        setConn('on', 'Connected to ' + (device.name || 'light'));
+        $('pinHelp').classList.add('hidden');
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (!device.gatt.connected) break;
+        setConn('busy', 'Waiting for pairing…');
+        await sleep(2500);
+      }
+    }
+    throw lastErr || new Error('Could not connect');
+  }
+
+  async function connect() {
+    if (!navigator.bluetooth) { $('noBle').classList.remove('hidden'); return; }
+    try {
+      userDisconnect = false;
+      $('pinHelp').classList.remove('hidden');
+      device = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }] });
+      device.addEventListener('gattserverdisconnected', onDisconnected);
+      await setupGatt();
+    } catch (e) {
+      console.warn(e);
+      setConn('off', 'Not connected');
+      if (e && e.name === 'NotFoundError') { $('pinHelp').classList.add('hidden'); return; } // user cancelled
+      toast('Could not connect. Make sure the light is powered and close by, then try again.');
+    }
+  }
+
+  async function onDisconnected() {
+    cmdChar = null; statusChar = null;
+    setConn('off', 'Disconnected');
+    if (userDisconnect || !device) return;
+    for (let i = 0; i < 5 && !userDisconnect; i++) {   // try to reconnect automatically
+      await sleep(1500 * (i + 1));
+      try { await setupGatt(); return; } catch (e) { setConn('off', 'Disconnected'); }
+    }
+  }
+
+  $('connectBtn').onclick = () => {
+    if (connected && device) { userDisconnect = true; device.gatt.disconnect(); }
+    else connect();
+  };
+
+  if (!navigator.bluetooth) $('noBle').classList.remove('hidden');
+  render();
+})();
+</script>
+</body>
+</html>
