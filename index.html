@@ -56,6 +56,12 @@
   .stat .l { font-size: 12px; color: var(--muted); }
   .stat.warn .v { color: var(--warn); }
   .chips { display: flex; gap: 8px; }
+  .turns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .turnbtn { padding: 16px 6px; font-size: 17px; font-weight: 700; }
+  .turnbtn.haz { font-size: 15px; }
+  .turnbtn.on { background: #ffae00; border-color: #ffae00; color: #1a1200; animation: turnblink 1s steps(1) infinite; }
+  @keyframes turnblink { 0% { background: #ffae00; } 50% { background: #5a3d00; color: #ffd27a; } }
+  .card h2.sub2 { margin-top: 16px; }
   .chip { flex: 1; text-align: center; font-size: 13px; padding: 7px 0; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
   .chip.brake.on { background: #4a0f12; color: #ff8a8a; border-color: #8a1c22; }
   .chip.turn.on { background: #4a3300; color: #ffd27a; border-color: #8a6200; }
@@ -88,6 +94,22 @@
   .patterns small { color: var(--warn); }
   .patterns button.sel small { color: #8a5a00; }
 
+  /* American flag buttons */
+  .patterns button.flag, .patterns button.flag.sel {
+    position: relative; overflow: hidden; color: #fff; font-weight: 700; letter-spacing: .2px;
+    border: 1px solid #7a1622;
+    background: repeating-linear-gradient(to bottom, #b22234 0, #b22234 calc(100% / 13),
+                #ffffff calc(100% / 13), #ffffff calc(200% / 13));
+  }
+  .patterns button.flag::before {
+    content: ""; position: absolute; left: 0; top: 0; width: 40%; height: calc(700% / 13);
+    background-color: #3c3b6e;
+    background-image: radial-gradient(circle, #fff 0 1.1px, transparent 1.4px);
+    background-size: 7px 6px; background-position: 1px 0;
+  }
+  .patterns button.flag .lbl { position: relative; z-index: 1; background: rgba(10, 14, 30, .72);
+    padding: 3px 8px; border-radius: 7px; }
+  .patterns button.flag.sel { outline: 3px solid var(--text); outline-offset: 2px; }
   .test { width: 100%; margin-top: 10px; }
   footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 16px; }
   .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
@@ -126,7 +148,14 @@
     </section>
 
     <section class="card">
-      <h2>Status</h2>
+      <h2>Turn signals</h2>
+      <div class="turns">
+        <button class="turnbtn" id="tL">◀ LT</button>
+        <button class="turnbtn haz" id="tH">⚠ 4-Way</button>
+        <button class="turnbtn" id="tR">RT ▶</button>
+      </div>
+      <p class="note">Tap to turn on, tap again to turn off. LT and RT together flash as 4-way flashers.</p>
+      <h2 class="sub2">Vehicle inputs</h2>
       <div class="chips">
         <div class="chip turn" id="chipL">◀ Left</div>
         <div class="chip brake" id="chipB">Brake</div>
@@ -185,7 +214,7 @@
   const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
   const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
   const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
-  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10 };
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11 };
 
   const COLORS = [
     ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
@@ -197,12 +226,12 @@
     ['Rainbow Fade', 0], ['Rainbow Jump', 0], ['Rainbow Strobe', 0], ['Breathe', 1],
     ['Strobe 1.5–20 Hz', 1], ['Double Flash', 1], ['Heartbeat', 1], ['Left/Right Flash', 1],
     ['Left/Right Fade', 1], ['Purple/Cyan Wig-Wag', 0], ['Pink/Blue Fade', 0], ['Fire Flicker', 0],
-    ['Ocean Fade', 0], ['Sunset Fade', 0], ['Forest Fade', 0], ['Red/White/Blue Jump', 0],
-    ['7-Color Jump', 0], ['Red/White/Blue Fade', 0], ['Random Flash', 0], ['Rainbow Pulse', 0],
+    ['Ocean Fade', 0], ['Sunset Fade', 0], ['Forest Fade', 0], ['AMERICAN jump', 0, 'flag'],
+    ['7-Color Jump', 0], ['AMERICAN fade', 0, 'flag'], ['Random Flash', 0], ['Rainbow Pulse', 0],
   ];
 
   const $ = id => document.getElementById(id);
-  const state = { source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2, custom: [255, 0, 0], selCustom: false };
+  const state = { manL: false, manR: false, source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2, custom: [255, 0, 0], selCustom: false };
   let device = null, cmdChar = null, statusChar = null, connected = false, userDisconnect = false;
 
   // ---------- UI build ----------
@@ -213,10 +242,11 @@
     b.onclick = () => { state.color = i; state.type = 0; state.source = 1; state.selCustom = false; render(); send(OP.COLOR, i); };
     $('swatches').appendChild(b);
   });
-  PATTERNS.forEach(([name, usesColor], i) => {
+  PATTERNS.forEach(([name, usesColor, style], i) => {
     const b = document.createElement('button');
     b.dataset.v = i;
-    b.innerHTML = name + (usesColor ? ' <small>●</small>' : '');
+    if (style === 'flag') { b.className = 'flag'; b.innerHTML = '<span class="lbl">' + name + '</span>'; }
+    else b.innerHTML = name + (usesColor ? ' <small>●</small>' : '');
     b.onclick = () => { state.pattern = i; state.type = 1; state.source = 1; render(); send(OP.PATTERN, i); };
     $('patterns').appendChild(b);
   });
@@ -289,6 +319,12 @@
   wheel.addEventListener('pointercancel', () => { dragging = false; });
   window.addEventListener('resize', drawWheel);
 
+  // ---------- Phone turn signals ----------
+  function sendTurns() { send(OP.TURNS, (state.manL ? 1 : 0) | (state.manR ? 2 : 0)); render(); }
+  $('tL').onclick = () => { state.manL = !state.manL; sendTurns(); };
+  $('tR').onclick = () => { state.manR = !state.manR; sendTurns(); };
+  $('tH').onclick = () => { const on = !(state.manL && state.manR); state.manL = on; state.manR = on; sendTurns(); };
+
   $('offBtn').onclick = () => { state.type = 2; state.source = 1; render(); send(OP.OFF, 0); };
   $('sourceSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
     state.source = +b.dataset.v; render(); send(OP.SOURCE, state.source);
@@ -320,6 +356,9 @@
       b.classList.toggle('sel', state.source === 1 && state.type === 1 && +b.dataset.v === state.pattern));
     $('offBtn').classList.toggle('sel', state.source === 1 && state.type === 2);
     $('pickSw').classList.toggle('sel', state.source === 1 && state.type === 3);
+    $('tL').classList.toggle('on', state.manL);
+    $('tR').classList.toggle('on', state.manR);
+    $('tH').classList.toggle('on', state.manL && state.manR);
     $('pickText').textContent = (state.source === 1 && state.type === 3) ? 'Wheel color is on'
       : state.selCustom ? 'Wheel color (used by ● patterns)' : 'Touch or drag on the wheel';
     if (document.activeElement !== $('bright')) { $('bright').value = state.bright; $('brightOut').textContent = state.bright + '%'; }
@@ -373,6 +412,8 @@
     $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
     $('chipL').classList.toggle('on', !!(flags & 0x02));
     $('chipR').classList.toggle('on', !!(flags & 0x04));
+    state.manL = !!(flags & 0x20);
+    state.manR = !!(flags & 0x40);
     $('footer').textContent = (device && device.name ? device.name + ' · ' : '') + 'firmware v' + fw;
     render();
   }
