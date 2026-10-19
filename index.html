@@ -55,7 +55,7 @@
   .stat .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .stat .l { font-size: 12px; color: var(--muted); }
   .stat.warn .v { color: var(--warn); }
-  .chips { display: flex; gap: 8px; margin-top: 10px; }
+  .chips { display: flex; gap: 8px; }
   .chip { flex: 1; text-align: center; font-size: 13px; padding: 7px 0; border-radius: 999px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
   .chip.brake.on { background: #4a0f12; color: #ff8a8a; border-color: #8a1c22; }
   .chip.turn.on { background: #4a3300; color: #ffd27a; border-color: #8a6200; }
@@ -119,11 +119,6 @@
 
     <section class="card">
       <h2>Status</h2>
-      <div class="stats">
-        <div class="stat" id="tempStat"><div class="v" id="tempV">--</div><div class="l">Heat sink</div></div>
-        <div class="stat"><div class="v" id="voltV">--</div><div class="l">Vehicle</div></div>
-        <div class="stat" id="powerStat"><div class="v" id="powerV">--</div><div class="l">Heat limit</div></div>
-      </div>
       <div class="chips">
         <div class="chip turn" id="chipL">◀ Left</div>
         <div class="chip brake" id="chipB">Brake</div>
@@ -185,10 +180,10 @@
   // [name, uses selected color]
   const PATTERNS = [
     ['Rainbow Fade', 0], ['Rainbow Jump', 0], ['Rainbow Strobe', 0], ['Breathe', 1],
-    ['Strobe', 1], ['Double Flash', 1], ['Heartbeat', 1], ['Left/Right Flash', 1],
+    ['Strobe 1.5–20 Hz', 1], ['Double Flash', 1], ['Heartbeat', 1], ['Left/Right Flash', 1],
     ['Left/Right Fade', 1], ['Purple/Cyan Wig-Wag', 0], ['Pink/Blue Fade', 0], ['Fire Flicker', 0],
-    ['Ocean Fade', 0], ['Sunset Fade', 0], ['Forest Fade', 0], ['3-Color Jump', 0],
-    ['7-Color Jump', 0], ['3-Color Fade', 0], ['Random Flash', 0], ['Rainbow Pulse', 0],
+    ['Ocean Fade', 0], ['Sunset Fade', 0], ['Forest Fade', 0], ['Red/White/Blue Jump', 0],
+    ['7-Color Jump', 0], ['Red/White/Blue Fade', 0], ['Random Flash', 0], ['Rainbow Pulse', 0],
   ];
 
   const $ = id => document.getElementById(id);
@@ -281,16 +276,7 @@
     state.bright  = d.getUint8(5);
     state.brake   = d.getUint8(6);
     const flags = d.getUint8(7);
-    const tF = d.getInt16(8, true) / 10;
-    const volts = d.getUint16(10, true) / 100;
-    const power = d.getUint8(12);
     const fw = d.getUint8(14);
-    const fault = !!(flags & 0x08);
-    $('tempV').textContent = fault ? 'Fault' : Math.round(tF) + '°F';
-    $('tempStat').classList.toggle('warn', fault || tF > 120);
-    $('voltV').textContent = volts.toFixed(1) + 'V';
-    $('powerV').textContent = power + '%';
-    $('powerStat').classList.toggle('warn', power < 100);
     $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
     $('chipL').classList.toggle('on', !!(flags & 0x02));
     $('chipR').classList.toggle('on', !!(flags & 0x04));
