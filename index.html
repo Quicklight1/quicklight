@@ -60,6 +60,14 @@
   .chip.brake.on { background: #4a0f12; color: #ff8a8a; border-color: #8a1c22; }
   .chip.turn.on { background: #4a3300; color: #ffd27a; border-color: #8a6200; }
 
+  .wheelwrap { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .wheelbox { position: relative; width: min(76vw, 300px); aspect-ratio: 1; }
+  #wheel { width: 100%; height: 100%; display: block; border-radius: 50%; touch-action: none; cursor: crosshair; }
+  #marker { position: absolute; width: 28px; height: 28px; border-radius: 50%; border: 3px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.5); transform: translate(-50%, -50%); pointer-events: none; }
+  .pickrow { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+  #pickSw { width: 30px; height: 30px; border-radius: 9px; border: 2px solid var(--line); }
+  #pickSw.sel { border-color: var(--text); }
   .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .sw { aspect-ratio: 1.25; border-radius: 12px; border: 2px solid transparent; position: relative; padding: 0;
     display: flex; align-items: flex-end; justify-content: center; }
@@ -128,6 +136,13 @@
 
     <section class="card">
       <h2>Colors</h2>
+      <div class="wheelwrap">
+        <div class="wheelbox">
+          <canvas id="wheel" aria-label="Color wheel: touch a spot to pick that color"></canvas>
+          <div id="marker"></div>
+        </div>
+        <div class="pickrow"><div id="pickSw"></div><span id="pickText">Touch or drag on the wheel</span></div>
+      </div>
       <div class="swatches" id="swatches"></div>
       <div class="offrow"><button id="offBtn">Lights off</button></div>
       <div class="slider">
@@ -170,7 +185,7 @@
   const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
   const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
   const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
-  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9 };
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10 };
 
   const COLORS = [
     ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
@@ -187,7 +202,7 @@
   ];
 
   const $ = id => document.getElementById(id);
-  const state = { source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2 };
+  const state = { source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2, custom: [255, 0, 0], selCustom: false };
   let device = null, cmdChar = null, statusChar = null, connected = false, userDisconnect = false;
 
   // ---------- UI build ----------
@@ -195,7 +210,7 @@
     const b = document.createElement('button');
     b.className = 'sw'; b.style.background = css; b.dataset.v = i;
     b.innerHTML = '<span>' + name + '</span>';
-    b.onclick = () => { state.color = i; state.type = 0; state.source = 1; render(); send(OP.COLOR, i); };
+    b.onclick = () => { state.color = i; state.type = 0; state.source = 1; state.selCustom = false; render(); send(OP.COLOR, i); };
     $('swatches').appendChild(b);
   });
   PATTERNS.forEach(([name, usesColor], i) => {
@@ -205,6 +220,75 @@
     b.onclick = () => { state.pattern = i; state.type = 1; state.source = 1; render(); send(OP.PATTERN, i); };
     $('patterns').appendChild(b);
   });
+  // ---------- Color wheel ----------
+  const wheel = $('wheel'), marker = $('marker');
+  let dragging = false, wheelTimer = null, wheelLastSent = 0;
+
+  function hsvToRgb(h, s, v) {          // h 0-360, s/v 0-1 -> [r,g,b] 0-255
+    const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return [f(5), f(3), f(1)].map(x => Math.round(x * 255));
+  }
+  function rgbToHs(r, g, b) {           // -> [h 0-360, s 0-1]
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    if (mx === 0) return [0, 0];
+    let h = 0;
+    if (d) {
+      if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+      h *= 60; if (h < 0) h += 360;
+    }
+    return [h, d / mx];
+  }
+  function drawWheel() {
+    const size = Math.round(wheel.clientWidth * (window.devicePixelRatio || 1));
+    if (!size) return;
+    wheel.width = wheel.height = size;
+    const ctx = wheel.getContext('2d'), img = ctx.createImageData(size, size), R = size / 2;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const dx = x - R + 0.5, dy = y - R + 0.5, dist = Math.hypot(dx, dy), i = (y * size + x) * 4;
+      if (dist > R) continue;
+      const h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      const [r, g, b] = hsvToRgb(h, Math.min(1, dist / R), 1);
+      img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b;
+      img.data[i + 3] = dist > R - 1 ? Math.round(255 * (R - dist)) : 255;   // smooth edge
+    }
+    ctx.putImageData(img, 0, 0);
+    placeMarker();
+  }
+  function placeMarker() {
+    const [h, s] = rgbToHs(...state.custom);
+    const half = wheel.clientWidth / 2, a = h * Math.PI / 180;
+    marker.style.left = (half + Math.cos(a) * s * half) + 'px';
+    marker.style.top  = (half + Math.sin(a) * s * half) + 'px';
+    marker.style.background = 'rgb(' + state.custom.join(',') + ')';
+    $('pickSw').style.background = 'rgb(' + state.custom.join(',') + ')';
+  }
+  function sendCustom() {
+    wheelLastSent = Date.now();
+    sendRaw([OP.CUSTOM, ...state.custom]);
+  }
+  function pickAt(ev, final) {
+    const rect = wheel.getBoundingClientRect(), half = rect.width / 2;
+    const dx = ev.clientX - rect.left - half, dy = ev.clientY - rect.top - half;
+    const h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    const s = Math.min(1, Math.hypot(dx, dy) / half);
+    state.custom = hsvToRgb(h, s, 1);
+    state.type = 3; state.source = 1; state.selCustom = true;
+    placeMarker(); render();
+    clearTimeout(wheelTimer);
+    if (final || Date.now() - wheelLastSent > 100) sendCustom();
+    else wheelTimer = setTimeout(sendCustom, 100);
+  }
+  wheel.addEventListener('pointerdown', ev => {
+    const rect = wheel.getBoundingClientRect(), half = rect.width / 2;
+    if (Math.hypot(ev.clientX - rect.left - half, ev.clientY - rect.top - half) > half + 4) return;
+    dragging = true; wheel.setPointerCapture(ev.pointerId); pickAt(ev, false); ev.preventDefault();
+  });
+  wheel.addEventListener('pointermove', ev => { if (dragging) pickAt(ev, false); });
+  const endDrag = ev => { if (!dragging) return; dragging = false; pickAt(ev, true); };
+  wheel.addEventListener('pointerup', endDrag);
+  wheel.addEventListener('pointercancel', () => { dragging = false; });
+  window.addEventListener('resize', drawWheel);
+
   $('offBtn').onclick = () => { state.type = 2; state.source = 1; render(); send(OP.OFF, 0); };
   $('sourceSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
     state.source = +b.dataset.v; render(); send(OP.SOURCE, state.source);
@@ -235,6 +319,9 @@
     $('patterns').querySelectorAll('button').forEach(b =>
       b.classList.toggle('sel', state.source === 1 && state.type === 1 && +b.dataset.v === state.pattern));
     $('offBtn').classList.toggle('sel', state.source === 1 && state.type === 2);
+    $('pickSw').classList.toggle('sel', state.source === 1 && state.type === 3);
+    $('pickText').textContent = (state.source === 1 && state.type === 3) ? 'Wheel color is on'
+      : state.selCustom ? 'Wheel color (used by ● patterns)' : 'Touch or drag on the wheel';
     if (document.activeElement !== $('bright')) { $('bright').value = state.bright; $('brightOut').textContent = state.bright + '%'; }
     if (document.activeElement !== $('speed'))  { $('speed').value = state.speed;  $('speedOut').textContent = state.speed; }
   }
@@ -256,9 +343,10 @@
 
   // ---------- Bluetooth ----------
   let chain = Promise.resolve();
-  function send(op, val) {
+  function send(op, val) { sendRaw([op, val & 0xff]); }
+  function sendRaw(bytes) {
     if (!cmdChar) return;
-    const data = new Uint8Array([op, val & 0xff]);
+    const data = new Uint8Array(bytes);
     chain = chain.then(() => {
       const w = cmdChar.writeValueWithResponse ? cmdChar.writeValueWithResponse(data) : cmdChar.writeValue(data);
       return w;
@@ -275,6 +363,11 @@
     state.speed   = d.getUint8(4);
     state.bright  = d.getUint8(5);
     state.brake   = d.getUint8(6);
+    if (!dragging) {
+      state.custom = [d.getUint8(8), d.getUint8(9), d.getUint8(10)];
+      state.selCustom = d.getUint8(11) === 1;
+      placeMarker();
+    }
     const flags = d.getUint8(7);
     const fw = d.getUint8(14);
     $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
@@ -345,6 +438,7 @@
   };
 
   if (!navigator.bluetooth) $('noBle').classList.remove('hidden');
+  drawWheel();
   render();
 })();
 </script>
