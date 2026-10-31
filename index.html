@@ -141,7 +141,13 @@
   </div>
 
   <div id="controls" class="disabled">
-    <section class="card">
+    <div id="qrBanner" class="banner hidden">
+      The screen is showing the QR code.<br>
+      <a id="siteLink" href="https://quicklightwhips.com" target="_blank" rel="noopener"
+         style="display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;background:#ffae00;color:#1a1200;font-weight:700;text-decoration:none">Open quicklightwhips.com</a>
+    </div>
+
+    <section class="card" id="sourceCard">
       <h2>Light source</h2>
       <div class="seg big" id="sourceSeg">
         <button data-v="0">Controller</button>
@@ -217,7 +223,7 @@
   const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
   const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
   const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
-  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11 };
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12 };
 
   const COLORS = [
     ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
@@ -412,6 +418,9 @@
     }
     const flags = d.getUint8(7);
     const fw = d.getUint8(14);
+    const extra = d.byteLength > 15 ? d.getUint8(15) : 0;
+    $('sourceCard').classList.toggle('hidden', !!(extra & 0x01));   // screen units have no controller input
+    $('qrBanner').classList.toggle('hidden', !(extra & 0x02));      // QR code open on the screen
     $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
     $('chipL').classList.toggle('on', !!(flags & 0x02));
     $('chipR').classList.toggle('on', !!(flags & 0x04));
@@ -438,6 +447,8 @@
         const v = await statusChar.readValue();
         onStatus({ target: { value: v } });
         setConn('on', 'Connected to ' + (device.name || 'light'));
+        // phone time zone, so the screen shows local time (quarter hours)
+        send(OP.TZ, Math.round(-new Date().getTimezoneOffset() / 15));
         $('pinHelp').classList.add('hidden');
         return;
       } catch (e) {
