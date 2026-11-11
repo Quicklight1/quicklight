@@ -237,6 +237,7 @@
     ['Left/Right Fade', 1], ['Purple/Cyan Wig-Wag', 0], ['Pink/Blue Fade', 0], ['Fire Flicker', 0],
     ['Ocean Fade', 0], ['Sunset Fade', 0], ['Forest Fade', 0], ['AMERICAN jump', 0, 'flag'],
     ['7-Color Jump', 0], ['AMERICAN fade', 0, 'flag'], ['Random Flash', 0], ['Rainbow Pulse', 0],
+    ['Sway', 1], ['Wave', 1], ['Ripple', 1], ['Color Sweep', 1], ['Rainbow Flow', 0],   // whip-to-whip (rear box / screen)
   ];
 
   const $ = id => document.getElementById(id);
@@ -426,7 +427,7 @@
     $('chipR').classList.toggle('on', !!(flags & 0x04));
     state.manL = !!(flags & 0x20);
     state.manR = !!(flags & 0x40);
-    $('footer').textContent = (device && device.name ? device.name + ' · ' : '') + 'firmware v' + fw;
+    $('footer').textContent = (device && device.name ? device.name + ' · ' : '') + 'firmware v' + fw + ((extra & 0x04) ? ' · screen connected' : '');
     render();
   }
 
