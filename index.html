@@ -211,6 +211,22 @@
       </div>
       <button class="test" id="testBtn">Test brake strobe</button>
     </section>
+
+    <section class="card hidden" id="updCard">
+      <h2>Software update</h2>
+      <div id="updIdle">
+        <p style="margin:0 0 10px;opacity:.8;font-size:14px">Got an update file for the rear box? Download it to this phone first, then tap below.</p>
+        <button class="test" id="updBtn">Update rear box software</button>
+      </div>
+      <div id="updOn" class="hidden" style="font-size:15px;line-height:1.6">
+        <b>The rear box made a WiFi for the update:</b><br>
+        1. In your phone's WiFi settings join <b id="updSsid">QuickLight-Rear</b><br>
+        &nbsp;&nbsp;&nbsp;password <b>ql268533</b><br>
+        2. Open your browser and go to <b>192.168.4.1</b><br>
+        3. Pick the update file and tap <b>Update</b>.<br>
+        <span style="opacity:.7;font-size:13px">The whips keep working. It turns itself off after 15 minutes.</span>
+      </div>
+    </section>
   </div>
 
   <footer id="footer">RGB Light Control</footer>
@@ -223,7 +239,7 @@
   const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
   const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
   const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
-  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12 };
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12, UPDATE: 13 };
 
   const COLORS = [
     ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
@@ -343,6 +359,7 @@
     state.brake = +b.dataset.v; render(); send(OP.BRAKEMODE, state.brake);
   });
   $('testBtn').onclick = () => send(OP.TEST, 0);
+  $('updBtn').onclick = () => send(OP.UPDATE, 1);
 
   function slider(id, outId, op, key, fmt) {
     const el = $(id); let timer = null, lastSent = 0;
@@ -422,6 +439,11 @@
     const extra = d.byteLength > 15 ? d.getUint8(15) : 0;
     $('sourceCard').classList.toggle('hidden', !!(extra & 0x01));   // screen units have no controller input
     $('qrBanner').classList.toggle('hidden', !(extra & 0x02));      // QR code open on the screen
+    $('updCard').classList.toggle('hidden', !(extra & 0x10));      // box can update over WiFi (rear box v1.1+)
+    $('updIdle').classList.toggle('hidden', !!(extra & 0x08));
+    $('updOn').classList.toggle('hidden', !(extra & 0x08));         // update WiFi is on
+    const hx = v => v.toString(16).toUpperCase().padStart(2, '0');
+    $('updSsid').textContent = 'QuickLight-Rear-' + hx(d.getUint8(12)) + hx(d.getUint8(13));
     $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
     $('chipL').classList.toggle('on', !!(flags & 0x02));
     $('chipR').classList.toggle('on', !!(flags & 0x04));
