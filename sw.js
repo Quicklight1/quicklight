@@ -2,7 +2,7 @@
 // The page is saved on the phone the first time it loads with internet.
 // After that it opens without internet. When internet is available, the
 // newest version is downloaded in the background and used next time.
-const CACHE = 'rgb-light-v11';
+const CACHE = 'rgb-light-v12';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
