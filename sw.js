@@ -1,12 +1,13 @@
-// Offline support for RGB Light Control.
-// The page is saved on the phone the first time it loads with internet.
-// After that it opens without internet. When internet is available, the
-// newest version is downloaded in the background and used next time.
-const CACHE = 'rgb-light-v14';
+// Offline support for the Quick Light phone app.
+// With internet: the page always loads the NEWEST version from the website
+// (and saves a copy). Without internet: the saved copy opens instead.
+const CACHE = 'rgb-light-v15';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE)
+    .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -15,16 +16,21 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
+// fetch with a time limit, so a weak signal falls back to the saved copy quickly
+function fetchFresh(req, ms) {
+  return new Promise(resolve => {
+    const t = setTimeout(() => resolve(null), ms);
+    fetch(req, { cache: 'no-cache' }).then(r => { clearTimeout(t); resolve(r && r.ok ? r : null); })
+      .catch(() => { clearTimeout(t); resolve(null); });
+  });
+}
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(caches.open(CACHE).then(async cache => {
+    const fresh = await fetchFresh(e.request, 4000);       // newest first
+    if (fresh) { cache.put(e.request, fresh.clone()); return fresh; }
     const saved = await cache.match(e.request, { ignoreSearch: true });
-    const fresh = fetch(e.request).then(res => {
-      if (res && res.ok) cache.put(e.request, res.clone());
-      return res;
-    }).catch(() => null);
-    if (saved) { e.waitUntil(fresh); return saved; }   // offline-first, update in background
-    const res = await fresh;
-    return res || cache.match('./index.html');
+    return saved || cache.match('./index.html');            // no internet: saved copy
   }));
 });
