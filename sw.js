@@ -1,7 +1,7 @@
 // Offline support for the Quick Light phone app.
 // With internet: the page always loads the NEWEST version from the website
 // (and saves a copy). Without internet: the saved copy opens instead.
-const CACHE = 'rgb-light-v15';
+const CACHE = 'rgb-light-v16';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
