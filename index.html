@@ -51,6 +51,7 @@
     border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
   .seg button { border: 0; background: transparent; padding: 12px 6px; border-radius: 9px; font-weight: 600; }
   .seg button.sel { background: var(--text); color: #111; }
+  #hbBtn.sel { background: #2fbf6a; color: #fff; border-color: #2fbf6a; }
   .seg.big button { padding: 16px 6px; font-size: 17px; }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -207,7 +208,14 @@
         <button data-v="0">Steady</button>
         <button data-v="1">Short</button>
         <button data-v="2">Standard</button>
-        <button data-v="3">Fast</button>
+        <button data-v="3" id="fastBtn">Fast</button>
+      </div>
+      <div id="hbRow" class="hidden" style="margin-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div><b>Hard-brake flash</b><br><span style="opacity:.75;font-size:13px">Fast strobe only on very hard braking</span></div>
+          <button id="hbBtn" style="min-width:76px">OFF</button>
+        </div>
+        <div id="hbNote" style="font-size:13px;color:#ffb020;margin-top:6px">Needs the screen for activation</div>
       </div>
       <button class="test" id="testBtn">Test brake strobe</button>
     </section>
@@ -239,7 +247,7 @@
   const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
   const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
   const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
-  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12, UPDATE: 13 };
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12, UPDATE: 13, HBFLASH: 14 };
 
   const COLORS = [
     ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
@@ -359,6 +367,7 @@
     state.brake = +b.dataset.v; render(); send(OP.BRAKEMODE, state.brake);
   });
   $('testBtn').onclick = () => send(OP.TEST, 0);
+  $('hbBtn').onclick = () => { state.hb = !state.hb; render(); send(OP.HBFLASH, state.hb ? 1 : 0); };
   $('updBtn').onclick = () => send(OP.UPDATE, 1);
 
   function slider(id, outId, op, key, fmt) {
@@ -377,6 +386,8 @@
   function render() {
     $('sourceSeg').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.v === state.source));
     $('brakeSeg').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.v === state.brake));
+    $('hbBtn').textContent = state.hb ? 'ON' : 'OFF';
+    $('hbBtn').classList.toggle('sel', !!state.hb);
     $('swatches').querySelectorAll('.sw').forEach(b =>
       b.classList.toggle('sel', state.source === 1 && state.type === 0 && +b.dataset.v === state.color));
     $('patterns').querySelectorAll('button').forEach(b =>
@@ -440,6 +451,12 @@
     $('sourceCard').classList.toggle('hidden', !!(extra & 0x01));   // screen units have no controller input
     $('qrBanner').classList.toggle('hidden', !(extra & 0x02));      // QR code open on the screen
     $('updCard').classList.toggle('hidden', !(extra & 0x10));      // box can update over WiFi (rear box v1.1+)
+    const hbOk = (extra & 0x10) && fw >= 37;                         // rear box: Fast is replaced by hard-brake flash
+    $('hbRow').classList.toggle('hidden', !hbOk);
+    $('fastBtn').classList.toggle('hidden', !!hbOk);
+    state.hb = !!(extra & 0x20);
+    $('hbNote').textContent = (extra & 0x40) ? 'HARD BRAKING - fast strobe now' : ((extra & 0x04) ? 'Uses the G sensor in your screen' : 'Needs the screen for activation');
+    $('hbNote').style.color = (extra & 0x04) && !(extra & 0x40) ? '' : '#ffb020';
     $('updIdle').classList.toggle('hidden', !!(extra & 0x08));
     $('updOn').classList.toggle('hidden', !(extra & 0x08));         // update WiFi is on
     const hx = v => v.toString(16).toUpperCase().padStart(2, '0');
