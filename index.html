@@ -208,9 +208,9 @@
         <button data-v="0">Steady</button>
         <button data-v="1">Short</button>
         <button data-v="2">Standard</button>
-        <button data-v="3" id="fastBtn">Fast</button>
+        <button data-v="3" id="fastBtn" class="hidden">Fast</button>
       </div>
-      <div id="hbRow" class="hidden" style="margin-top:12px">
+      <div id="hbRow" style="margin-top:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
           <div><b>Hard-brake flash</b><br><span style="opacity:.75;font-size:13px">Fast strobe only on very hard braking</span></div>
           <button id="hbBtn" style="min-width:76px">OFF</button>
@@ -283,7 +283,7 @@
     ['Sway', 1], ['Wave', 1], ['Ripple', 1], ['Color Sweep', 1], ['Rainbow Flow', 0],   // whip-to-whip (rear box / screen)
   ];
 
-  const APP_VER = 'v15';                 // change with sw.js CACHE so you can see which app version a phone has
+  const APP_VER = 'v16';                 // change with sw.js CACHE so you can see which app version a phone has
   const $ = id => document.getElementById(id);
   $('footer').textContent = 'Quick Light app ' + APP_VER;
   const state = { manL: false, manR: false, source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2, custom: [255, 0, 0], selCustom: false };
@@ -444,7 +444,8 @@
     $('connectBtn').classList.toggle('primary', !connected);
   }
 
-  let toastTimer = null;
+  let toastTimer = null, toastShown = {};
+  function toastOnce(msg) { if (!toastShown[msg]) { toastShown[msg] = 1; toast(msg); } }
   function toast(msg) {
     const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
@@ -484,8 +485,9 @@
     $('qrBanner').classList.toggle('hidden', !(extra & 0x02));      // QR code open on the screen
     $('updCard').classList.toggle('hidden', !(extra & 0x10));      // box can update over WiFi (rear box v1.1+)
     const hbOk = (extra & 0x10) && fw >= 37;                         // rear box: Fast is replaced by hard-brake flash
-    $('hbRow').classList.toggle('hidden', !hbOk);
+    $('hbRow').classList.toggle('hidden', !hbOk);                 // a box with older software still has Fast
     $('fastBtn').classList.toggle('hidden', !!hbOk);
+    if (!hbOk) toastOnce('This box has older software: update it to get the Hard-brake flash.');
     state.hb = !!(extra & 0x20);
     $('hbNote').textContent = (extra & 0x40) ? 'HARD BRAKING - fast strobe now' : ((extra & 0x04) ? 'Uses the G sensor in your screen' : 'Needs the screen for activation');
     $('hbNote').style.color = (extra & 0x04) && !(extra & 0x40) ? '' : '#ffb020';
