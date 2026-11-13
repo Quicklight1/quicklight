@@ -220,6 +220,25 @@
       <button class="test" id="testBtn">Test brake strobe</button>
     </section>
 
+    <section class="card hidden" id="setupCard">
+      <h2>Rear box setup</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <b>Whip sides</b>
+        <div class="seg" id="swWSeg" style="max-width:220px"><button data-v="0">Normal</button><button data-v="1">Swapped</button></div>
+      </div>
+      <button class="test" id="identBtn">Blink the LEFT whip</button>
+      <p class="note">The whip on the <b>left side</b> of the vehicle should blink amber. If the right one blinks, pick <b>Swapped</b>.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px">
+        <b>Blinker wires</b>
+        <div class="seg" id="swISeg" style="max-width:220px"><button data-v="0">Normal</button><button data-v="1">Swapped</button></div>
+      </div>
+      <p class="note">Turn on the vehicle's <b>left</b> blinker: the <b>◀ Left</b> light under Turn signals should come on. If <b>Right ▶</b> comes on, pick <b>Swapped</b>.</p>
+      <h2 class="sub2">Turn signal box</h2>
+      <p id="tsText" style="margin:0 0 8px;font-size:14px">No turn signal box.</p>
+      <button class="test" id="tsBtn">Add turn signal box</button>
+      <p class="note" id="tsNote">A Quick Light relay box can work your turn signal lights: relay 1 = left, relay 2 = right. Tap Add, then power up the relay box close to the rear box.</p>
+    </section>
+
     <section class="card hidden" id="updCard">
       <h2>Software update</h2>
       <div id="updIdle">
@@ -247,7 +266,7 @@
   const SVC    = '1d68d854-2aa9-400c-8163-80e53269ac4a';
   const CMD    = '1d68d855-2aa9-400c-8163-80e53269ac4a';
   const STATUS = '1d68d856-2aa9-400c-8163-80e53269ac4a';
-  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12, UPDATE: 13, HBFLASH: 14 };
+  const OP = { SOURCE: 1, COLOR: 2, PATTERN: 3, SPEED: 4, BRIGHT: 5, BRAKEMODE: 6, TEST: 7, OFF: 8, PING: 9, CUSTOM: 10, TURNS: 11, TZ: 12, UPDATE: 13, HBFLASH: 14, SWAPWHIP: 16, SWAPIN: 17, IDENT: 18, TSBOX: 19 };
 
   const COLORS = [
     ['Red', '#ff2a2a'], ['Orange', '#ff7a00'], ['Amber', '#ffae00'], ['Yellow', '#ffe600'],
@@ -369,6 +388,15 @@
   $('testBtn').onclick = () => send(OP.TEST, 0);
   $('hbBtn').onclick = () => { state.hb = !state.hb; render(); send(OP.HBFLASH, state.hb ? 1 : 0); };
   $('updBtn').onclick = () => send(OP.UPDATE, 1);
+  // rear box setup (rear box v1.3+)
+  $('swWSeg').querySelectorAll('button').forEach(b => b.onclick = () => { state.swW = +b.dataset.v; render(); send(OP.SWAPWHIP, state.swW); });
+  $('swISeg').querySelectorAll('button').forEach(b => b.onclick = () => { state.swI = +b.dataset.v; render(); send(OP.SWAPIN, state.swI); });
+  $('identBtn').onclick = () => send(OP.IDENT, state.ident ? 0 : 1);
+  $('tsBtn').onclick = () => {
+    if (state.tsHave) {
+      if (confirm('Remove the turn signal box? Its relays turn off and it can be paired again.')) send(OP.TSBOX, 0);
+    } else send(OP.TSBOX, state.tsLooking ? 2 : 1);
+  };
 
   function slider(id, outId, op, key, fmt) {
     const el = $(id); let timer = null, lastSent = 0;
@@ -394,6 +422,8 @@
       b.classList.toggle('sel', state.source === 1 && state.type === 1 && +b.dataset.v === state.pattern));
     $('offBtn').classList.toggle('sel', state.source === 1 && state.type === 2);
     $('pickSw').classList.toggle('sel', state.source === 1 && state.type === 3);
+    $('swWSeg').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.v === (state.swW || 0)));
+    $('swISeg').querySelectorAll('button').forEach(b => b.classList.toggle('sel', +b.dataset.v === (state.swI || 0)));
     $('tL').classList.toggle('on', state.manL);
     $('tR').classList.toggle('on', state.manR);
     $('tH').classList.toggle('on', state.manL && state.manR);
@@ -464,6 +494,28 @@
     $('chipB').classList.toggle('on', !!(flags & 0x01) || !!(flags & 0x10));
     $('chipL').classList.toggle('on', !!(flags & 0x02));
     $('chipR').classList.toggle('on', !!(flags & 0x04));
+    const ext = d.byteLength >= 20 ? d.getUint8(16) : 0;              // rear box v1.3+
+    $('setupCard').classList.toggle('hidden', !(ext & 0x40));
+    if (ext & 0x40) {
+      state.swW = ext & 0x01 ? 1 : 0; state.swI = ext & 0x02 ? 1 : 0;
+      state.ident = !!(ext & 0x20); state.tsHave = !!(ext & 0x04); state.tsLooking = !!(ext & 0x10);
+      $('identBtn').textContent = state.ident ? 'Blinking the LEFT whip… (tap to stop)' : 'Blink the LEFT whip';
+      $('identBtn').classList.toggle('sel', state.ident);
+      const tsOn = d.getUint8(17), secs = d.getUint8(18);
+      if (state.tsHave) {
+        $('tsText').textContent = (ext & 0x08)
+          ? 'Turn signal box connected.  Left relay ' + (tsOn & 1 ? 'ON' : 'off') + ' · right relay ' + (tsOn & 2 ? 'ON' : 'off')
+          : 'Turn signal box added, not heard - check its power.';
+        $('tsText').style.color = (ext & 0x08) ? '' : '#ffb020';
+        $('tsBtn').textContent = 'Remove turn signal box';
+        $('tsNote').textContent = 'Relay 1 = left turn, relay 2 = right turn. They blink with the whips. Got a screen later? Move it from the screen: Controls > Rear box setup.';
+      } else {
+        $('tsText').textContent = state.tsLooking ? 'Looking… ' + secs + ' s.  Power up the relay box now, close to the rear box.' : 'No turn signal box.';
+        $('tsText').style.color = state.tsLooking ? '#ffb020' : '';
+        $('tsBtn').textContent = state.tsLooking ? 'Stop looking' : 'Add turn signal box';
+        $('tsNote').textContent = 'A Quick Light relay box can work your turn signal lights: relay 1 = left, relay 2 = right. Tap Add, then power up the relay box close to the rear box.';
+      }
+    }
     state.manL = !!(flags & 0x20);
     state.manR = !!(flags & 0x40);
     $('footer').textContent = (device && device.name ? device.name + ' · ' : '') + 'firmware v' + fw + ((extra & 0x04) ? ' · screen connected' : '');
