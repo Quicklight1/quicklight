@@ -119,6 +119,28 @@
   </div>
 
   <div id="controls" class="disabled">
+    <div id="noMaster" class="banner hidden">
+      <b>This post can't hear the master.</b> Changes you make won't reach the fence from here. Connect to a post closer to the master, or to the master itself.
+    </div>
+
+    <section class="card hidden" id="postCard">
+      <h2>This post</h2>
+      <div id="postNew" class="banner hidden" style="margin-bottom:10px">
+        <b>This post has no number yet.</b> Its top and bottom lights blink white. Type its place on the fence (first post = 1) and tap Save.
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <b>Post number</b>
+        <div class="postsrow">
+          <button id="pnMinus">−</button>
+          <input id="pn" type="number" inputmode="numeric" min="1" max="250" value="1">
+          <button id="pnPlus">+</button>
+        </div>
+      </div>
+      <button class="primary" id="pnSave" style="width:100%;margin-top:12px">Save post number</button>
+      <button id="identBtn" style="width:100%;margin-top:10px">Flash this post</button>
+      <p class="note">Post 1 is the end where the traveling color starts. After saving, the post restarts and shows up as "Fence Trac Post" plus its number.</p>
+    </section>
+
     <section class="card">
       <h2>Fence lights</h2>
       <div class="seg big" id="powerSeg">
@@ -170,7 +192,8 @@
           <button id="postsPlus">+</button>
         </div>
       </div>
-      <p class="note">So the traveling color knows where the fence ends. The traveling color starts at the first post (post 0).</p>
+      <p class="note">So the traveling color knows where the fence ends. The traveling color starts at post 1.</p>
+      <p class="note">To number a post: tap Connect and pick <b>Fence Trac New Post</b> (or <b>Fence Trac Post</b> + number to change one). You can control the whole fence from any post or from <b>Fence Trac Master</b>.</p>
     </section>
   </div>
 
@@ -184,7 +207,8 @@
   const SVC    = 'f3a1c000-5d2e-4b7a-9c1e-6a4f2b8d0f01';
   const CMD    = 'f3a1c001-5d2e-4b7a-9c1e-6a4f2b8d0f01';
   const STATUS = 'f3a1c002-5d2e-4b7a-9c1e-6a4f2b8d0f01';
-  const OP = { PATTERN: 1, FENCE_RGB: 2, FENCE_BRIGHT: 3, TRAVEL_RGB: 4, TRAVEL_BRIGHT: 5, SPEED: 6, POWER: 7, POSTS: 8, PING: 9 };
+  const OP = { PATTERN: 1, FENCE_RGB: 2, FENCE_BRIGHT: 3, TRAVEL_RGB: 4, TRAVEL_BRIGHT: 5, SPEED: 6, POWER: 7, POSTS: 8, PING: 9,
+               SET_POST: 20, IDENT: 21 };
 
   // same 12 colors as the Quick Light whip app
   const COLORS = [
@@ -207,7 +231,7 @@
     ['Rainbow Chase', 'f'], ['AMERICAN', '', 'flag'], ['Color Show', ''], ['Random Post Pop', 'ft'],
   ];
 
-  const APP_VER = 'v1';                  // change with sw.js CACHE so you can see which app version a phone has
+  const APP_VER = 'v2';                  // change with sw.js CACHE so you can see which app version a phone has
   const $ = id => document.getElementById(id);
   $('footer').textContent = 'Fence Trac app ' + APP_VER;
   const state = { pattern: 1, fence: [0, 60, 255], fBright: 60, travel: [255, 0, 0], tBright: 100, speed: 50, power: 1, posts: 3 };
@@ -329,6 +353,26 @@
   slider('tBright', 'tBrightOut', OP.TRAVEL_BRIGHT, 'tBright', v => v + '%');
   slider('speed', 'speedOut', OP.SPEED, 'speed', v => String(v));
 
+  // ---------- this post (when connected to a post) ----------
+  const pnVal = () => Math.max(1, Math.min(250, Math.round(+$('pn').value) || 1));
+  $('pnMinus').onclick = () => { $('pn').value = Math.max(1, pnVal() - 1); };
+  $('pnPlus').onclick = () => { $('pn').value = Math.min(250, pnVal() + 1); };
+  $('pnSave').onclick = () => {
+    const n = pnVal();
+    if (state.postNum && state.postNum !== n &&
+        !confirm('Change this post from number ' + state.postNum + ' to ' + n + '?')) return;
+    send(OP.SET_POST, n);
+    if (n > state.posts) setPosts(n);        // make sure the fence knows it is this long
+    toast('Saved as post ' + n + '. The post restarts — reconnect to it if you need to.');
+  };
+  let identOn = false, identTimer = null;
+  $('identBtn').onclick = () => {
+    identOn = !identOn; send(OP.IDENT, identOn ? 1 : 0);
+    $('identBtn').textContent = identOn ? 'Flashing… (tap to stop)' : 'Flash this post';
+    clearTimeout(identTimer);
+    if (identOn) identTimer = setTimeout(() => { identOn = false; $('identBtn').textContent = 'Flash this post'; }, 8000);
+  };
+
   // ---------- number of posts ----------
   function setPosts(n) {
     n = Math.max(1, Math.min(250, Math.round(n) || 1));
@@ -378,16 +422,29 @@
   function onStatus(ev) {
     const d = ev.target.value;
     if (!d || d.byteLength < 13) return;
-    state.pattern = d.getUint8(0);
-    if (!fencePicker.isDragging())  state.fence  = [d.getUint8(1), d.getUint8(2), d.getUint8(3)];
-    state.fBright = d.getUint8(4);
-    if (!travelPicker.isDragging()) state.travel = [d.getUint8(5), d.getUint8(6), d.getUint8(7)];
-    state.tBright = d.getUint8(8);
-    state.speed   = d.getUint8(9);
-    state.power   = d.getUint8(10);
-    state.posts   = d.getUint8(11);
+    const isPost = d.byteLength >= 16 && d.getUint8(13) === 1;
+    const postNum = isPost ? d.getUint8(14) : 0;
+    const hears = !isPost || !!(d.getUint8(15) & 1);
+    if (hears) {                     // a post that can't hear the master has no real settings to show
+      state.pattern = d.getUint8(0);
+      if (!fencePicker.isDragging())  state.fence  = [d.getUint8(1), d.getUint8(2), d.getUint8(3)];
+      state.fBright = d.getUint8(4);
+      if (!travelPicker.isDragging()) state.travel = [d.getUint8(5), d.getUint8(6), d.getUint8(7)];
+      state.tBright = d.getUint8(8);
+      state.speed   = d.getUint8(9);
+      state.power   = d.getUint8(10);
+      state.posts   = d.getUint8(11);
+    }
     const fw = d.getUint8(12);
-    $('footer').textContent = 'Fence Trac app ' + APP_VER + ' · ' + (device && device.name ? device.name + ' · ' : '') + 'master v' + fw;
+    $('postCard').classList.toggle('hidden', !isPost);
+    $('postNew').classList.toggle('hidden', !(isPost && postNum === 0));
+    $('noMaster').classList.toggle('hidden', hears);
+    if (isPost && (state.postNum !== postNum || state.isPost !== isPost) && document.activeElement !== $('pn')) {
+      $('pn').value = postNum || Math.min(250, (state.posts || 1));
+    }
+    state.isPost = isPost; state.postNum = postNum;
+    $('footer').textContent = 'Fence Trac app ' + APP_VER + ' · ' + (device && device.name ? device.name + ' · ' : '') +
+      (isPost ? 'post v' : 'master v') + fw;
     render();
   }
 
