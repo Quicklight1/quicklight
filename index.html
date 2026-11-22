@@ -243,6 +243,7 @@
       <h2>Software update</h2>
       <div id="updIdle">
         <p style="margin:0 0 10px;opacity:.8;font-size:14px">Got an update file for the rear box? Download it to this phone first, then tap below.</p>
+        <a href="updates/" target="_blank" rel="noopener" style="display:block;text-align:center;margin:0 0 10px;padding:12px;border-radius:12px;background:#ffae00;color:#0e1013;font-weight:700;text-decoration:none">Download update files</a>
         <button class="test" id="updBtn">Update rear box software</button>
       </div>
       <div id="updOn" class="hidden" style="font-size:15px;line-height:1.6">
@@ -283,7 +284,7 @@
     ['Sway', 1], ['Wave', 1], ['Ripple', 1], ['Color Sweep', 1], ['Rainbow Flow', 0],   // whip-to-whip (rear box / screen)
   ];
 
-  const APP_VER = 'v17';                 // change with sw.js CACHE so you can see which app version a phone has
+  const APP_VER = 'v18';                 // change with sw.js CACHE so you can see which app version a phone has
   const $ = id => document.getElementById(id);
   $('footer').textContent = 'Quick Light app ' + APP_VER;
   const state = { manL: false, manR: false, source: 0, type: 0, color: 0, pattern: 0, speed: 50, bright: 100, brake: 2, custom: [255, 0, 0], selCustom: false };
