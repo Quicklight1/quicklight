@@ -4,142 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e1013">
-<meta http-equiv="Cache-Control" content="no-cache">
 <title>Quick Light Updates</title>
 <link rel="icon" href="../icon-192.png">
 <style>
-  :root { --bg:#0e1013; --panel:#171a1f; --panel-2:#1f232a; --line:#2a2f37; --text:#eef1f5; --muted:#8b939f;
-          --accent:#ff3b3b; --ok:#32d27a; --warn:#ffb020; --amber:#ffae00; }
-  * { box-sizing: border-box; }
+  :root { --bg:#0e1013; --panel:#171a1f; --line:#2a2f37; --text:#eef1f5; --muted:#8b939f; --amber:#ffae00; }
   html, body { margin:0; background:var(--bg); color:var(--text);
-    font:16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  body { padding:max(16px, env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom)); }
-  .wrap { max-width:560px; margin:0 auto; }
-  h1 { font-size:22px; margin:4px 0 2px; }
-  h2 { font-size:15px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); margin:26px 0 10px; }
-  .sub { color:var(--muted); font-size:14px; margin:0 0 6px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:10px; }
-  .file { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .file b { display:block; font-size:16px; }
-  .file span { color:var(--muted); font-size:13px; }
-  .dl { flex:none; border:0; font-family:inherit; cursor:pointer; text-decoration:none; color:#0e1013; background:var(--amber); font-weight:700;
-         padding:11px 16px; border-radius:12px; font-size:15px; }
-  .dl:active { transform:scale(.97); }
-  ol { margin:0; padding-left:22px; }
-  ol li { margin:0 0 9px; }
-  .note { border-color:#5a4410; background:#1d1709; }
-  .note b { color:var(--amber); }
-  .stop { border-color:#5a1b1b; background:#1f0d0d; }
-  .stop b { color:#ff6a6a; }
-  code { background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:15px; }
-  footer { color:var(--muted); font-size:12px; text-align:center; margin-top:28px; }
+    font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body { padding:max(24px, env(safe-area-inset-top)) 16px 32px; }
+  .wrap { max-width:520px; margin:0 auto; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:16px; }
+  h1 { font-size:22px; margin:0; }
+  a { color:var(--amber); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Quick Light Software Updates</h1>
-  <p class="sub"><b style="color:var(--amber)">Last updated Nov 22, 2026.</b> If you see an older date, pull down to refresh.</p>
-  <p class="sub">quicklightwhips.com. Download only the files for the parts you have. No computer or wires needed.</p>
-
-  <h2>1. Download your files</h2>
   <div class="card">
-    <label for="code" style="display:block;font-weight:700;margin-bottom:8px">Update code</label>
-    <input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="QL-0000-XXX"
-      style="width:100%;box-sizing:border-box;font:700 20px/1 inherit;letter-spacing:2px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text)">
-    <div id="msg" style="margin-top:8px;font-size:14px;color:var(--muted)">Quick Light gives you this code with your update. The files only open with it.</div>
+    No update files are posted here right now.<br>
+    If your Quick Light needs an update, contact us through <a href="https://quicklightwhips.com">quicklightwhips.com</a> and we'll send it to you.
   </div>
-  <div class="card file"><div><b>4.3" screen</b><span>update 43 · Nov 22, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_SCREEN_4_3_INCH_update43">Download</button></div>
-  <div class="card file"><div><b>7" screen</b><span>update 43 · Nov 22, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_SCREEN_7_INCH_update43">Download</button></div>
-  <div class="card file"><div><b>4" screen</b><span>update 43 · Nov 22, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_SCREEN_4_INCH_update43">Download</button></div>
-  <div class="card file"><div><b>Rear whip box</b><span>v1.8 · Nov 22, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_REAR_BOX_v1.8">Download</button></div>
-  <div class="card file"><div><b>Start box (push to start)</b><span>v1.1 · Nov 19, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_START_BOX_v1.1">Download</button></div>
-  <div class="card file"><div><b>Relay box (2 or 4 relays)</b><span>v1.4 · Nov 19, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_RELAY_BOX_v1.4">Download</button></div>
-  <div class="card file"><div><b>Relay box (8 relays)</b><span>v1.1 · Nov 19, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_RELAY_BOX_8_v1.1">Download</button></div>
-  <div class="card file"><div><b>GPS / LoRa pod</b><span>v1.7 · Nov 11, 2026</span></div>
-    <button class="dl" type="button" data-f="QL_LORA_GPS_POD_v1.7">Download</button></div>
-
-  <div class="card stop"><b>Important: update the screen first.</b> Screens on update 42 or older can restart during an update. If it restarts, just try again (it is safe: nothing changes until an update finishes). Update the screen first, then send the box files. Or update the rear box straight from the phone app (see "Rear box with no screen" below).</div>
-  <div class="card note"><b>Where the files go.</b> iPhone: if a message asks, tap <b>Download</b>. Files are saved in
-    the <b>Files</b> app under <b>Downloads</b>. Android: they're saved in <b>Downloads</b>.
-    Don't rename them. A file only fits the part it was made for, and a wrong one is refused with nothing changed.</div>
-
-  <h2>2. Put them on your system</h2>
-  <div class="card">
-    <ol>
-      <li>Park the vehicle with the power on. Keep your phone within a few feet of the screen.</li>
-      <li>On the screen, go to <b>Controls</b>, scroll down to <b>SOFTWARE</b> and tap <b>Update software (phone)</b>.</li>
-      <li>Turn your phone's <b>cellular data off</b> for the update.</li>
-      <li>On your phone, scan the QR code on the screen, or go to WiFi settings and join the
-        <b>QuickLight-XXXX</b> WiFi with the password shown. If it says "No internet", choose <b>Stay connected</b>. If a small sign-in window pops up by itself, <b>close it</b>.</li>
-      <li>Open <b>Safari or Chrome</b> yourself and go to <code>192.168.4.1</code> (don't use the pop-up window).</li>
-      <li>Tap <b>Choose file</b>, pick ONE file and tap <b>Update</b>. Wait until it says <b>Done</b>.</li>
-      <li>Tap <b>Close</b> on the screen. For the next file, tap <b>Update software (phone)</b> again and repeat steps 3 to 5.</li>
-      <li>When you're done, put your phone's WiFi back to normal.</li>
-    </ol>
-  </div>
-
-  <div class="card note"><b>Do them in this order:</b> screen first, then the rear box, then the start box and relay boxes.
-    The screen passes box files on to the box by itself.</div>
-  <div class="card stop"><b>Start box:</b> turn the ignition <b>OFF</b> before sending its file, or it won't update.
-    If the screen then shows <b>PIN MUST BE CHANGED</b>, set a new 6-digit master PIN and a 4-digit PIN.
-    Write the master PIN down. A lost PIN can't be recovered.</div>
-
-  <h2>Rear box with no screen</h2>
-  <div class="card">
-    <ol>
-      <li>Download the rear box file above.</li>
-      <li>Open the Quick Light phone app, tap <b>Connect</b>, scroll down to <b>Software update</b> and tap
-        <b>Update rear box software</b>.</li>
-      <li>Join the WiFi <b>QuickLight-Rear-XXXX</b> with the password <code>ql268533</code></li>
-      <li>Open the browser, go to <code>192.168.4.1</code>, choose the file and tap <b>Update</b>.</li>
-    </ol>
-  </div>
-
-  <div class="card"><b>Safe by design.</b> <span style="color:var(--muted)">The new program goes into a spare slot.
-    If the power cuts out or something goes wrong, the old program keeps running, so just try again.
-    Brake lights, turn signals and whips keep working during an update.</span></div>
-
-  <footer>Quick Light Whips · quicklightwhips.com</footer>
 </div>
-<script>
-// The update files are locked with the update code (AES-256-GCM, key from PBKDF2-SHA256, 200000 rounds).
-// The phone unlocks the file right here and saves the normal .bin file.
-(function(){
-  var codeEl=document.getElementById('code'), msg=document.getElementById('msg');
-  try{ var c=localStorage.getItem('qlcode'); if(c) codeEl.value=c; }catch(e){}
-  function say(t,col){ msg.textContent=t; msg.style.color=col||'var(--muted)'; }
-  async function unlock(name, btn){
-    var code=(codeEl.value||'').trim().toUpperCase();
-    if(!code){ say('Type your update code first.','#ff6a6a'); codeEl.focus(); return; }
-    if(!(window.crypto&&crypto.subtle)){ say('This browser can\'t unlock files. Use Safari or Chrome.','#ff6a6a'); return; }
-    var old=btn.textContent; btn.textContent='...'; btn.disabled=true;
-    try{
-      var r=await fetch(name+'.qlu',{cache:'no-store'}); if(!r.ok) throw new Error('net');
-      var b=new Uint8Array(await r.arrayBuffer());
-      if(String.fromCharCode(b[0],b[1],b[2],b[3])!=='QLE1') throw new Error('fmt');
-      var salt=b.slice(4,20), iv=b.slice(20,32), body=b.slice(32);
-      var base=await crypto.subtle.importKey('raw',new TextEncoder().encode(code),'PBKDF2',false,['deriveKey']);
-      var key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:200000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
-      var plain;
-      try{ plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},key,body); }
-      catch(e){ say('That code is not right. Check it and try again.','#ff6a6a'); return; }
-      try{ localStorage.setItem('qlcode',code); }catch(e){}
-      var url=URL.createObjectURL(new Blob([plain],{type:'application/octet-stream'}));
-      var a=document.createElement('a'); a.href=url; a.download=name+'.bin'; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function(){URL.revokeObjectURL(url);},60000);
-      say('Unlocked: '+name+'.bin is saving to your phone.','#32d27a');
-    }catch(e){ say('Could not download. Check your signal and try again.','#ff6a6a'); }
-    finally{ btn.textContent=old; btn.disabled=false; }
-  }
-  document.querySelectorAll('button.dl').forEach(function(b){ b.addEventListener('click',function(){ unlock(b.getAttribute('data-f'),b); }); });
-})();
-</script>
 </body>
 </html>
